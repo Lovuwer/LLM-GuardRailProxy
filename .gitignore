@@ -1,0 +1,29 @@
+# python stuff
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# environment variables
+.env
+
+# ide stuff
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# build artifacts
+dist/
+build/
+*.egg-info/

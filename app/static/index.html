@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <title>AI Chat</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9f9f9;
+            --bg-tertiary: #f4f4f4;
+            --border-color: #e5e5e5;
+            --border-hover: #d0d0d0;
+            --text-primary: #0d0d0d;
+            --text-secondary: #666666;
+            --text-tertiary: #8e8e8e;
+            --accent: #0d0d0d;
+            --accent-hover: #333333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Söhne', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: -0.01em;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Model Selector - Custom Dropdown */
+        .model-selector {
+            position: relative;
+        }
+
+        .model-selector-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .model-selector-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--border-hover);
+        }
+
+        .model-selector-btn svg {
+            width: 12px;
+            height: 12px;
+            color: var(--text-secondary);
+            transition: transform 0.2s ease;
+        }
+
+        .model-selector-btn.open svg {
+            transform: rotate(180deg);
+        }
+
+        .model-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            min-width: 220px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: all 0.15s ease;
+            z-index: 1000;
+        }
+
+        .model-dropdown.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .model-group {
+            padding: 6px;
+        }
+
+        .model-group:not(:last-child) {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .model-group-label {
+            padding: 8px 10px 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .model-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.1s ease;
+        }
+
+        .model-option:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .model-option.selected {
+            background: var(--bg-tertiary);
+        }
+
+        .model-option-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .model-option-info {
+            flex: 1;
+        }
+
+        .model-option-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .model-option-desc {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-top: 1px;
+        }
+
+        .model-option-check {
+            width: 16px;
+            height: 16px;
+            opacity: 0;
+        }
+
+        .model-option.selected .model-option-check {
+            opacity: 1;
+        }
+
+        /* API Key Bar */
+        .api-key-bar {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 12px 24px;
+            width: 100%;
+        }
+
+        .api-key-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .api-key-input {
+            flex: 1;
+            padding: 10px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+        }
+
+        .api-key-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            background: var(--bg-primary);
+            border-color: var(--text-secondary);
+        }
+
+        .clear-btn {
+            padding: 10px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .clear-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 120px;
+        }
+
+        .chat-messages {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Welcome State */
+        .welcome-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 24px;
+            text-align: center;
+        }
+
+        .welcome-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--accent);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .welcome-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .welcome-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            max-width: 400px;
+            line-height: 1.5;
+        }
+
+        /* Messages */
+        .message {
+            padding: 20px 0;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .message.user {
+            background: var(--bg-primary);
+        }
+
+        .message.assistant {
+            background: var(--bg-secondary);
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .message-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .message.user .message-avatar {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .message.assistant .message-avatar {
+            background: var(--accent);
+            color: white;
+        }
+
+        .message-sender {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .message-content {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            padding-left: 38px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .message-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+            padding-left: 38px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .security-badge.passed {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .security-badge.blocked {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        /* System Messages */
+        .message.system {
+            padding: 12px 0;
+        }
+
+        .message.system .message-inner {
+            display: flex;
+            justify-content: center;
+        }
+
+        .system-message {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .message.system.error .system-message {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        /* Input Area */
+        .input-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, var(--bg-primary) 80%, transparent);
+            padding: 24px 24px 32px;
+        }
+
+        .input-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .input-box {
+            display: flex;
+            align-items: flex-end;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 4px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .input-box:focus-within {
+            border-color: var(--text-secondary);
+            box-shadow: 0 0 0 1px var(--text-secondary);
+        }
+
+        .chat-textarea {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            font-family: inherit;
+            line-height: 1.5;
+            resize: none;
+            min-height: 24px;
+            max-height: 200px;
+            color: var(--text-primary);
+        }
+
+        .chat-textarea::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .chat-textarea:focus {
+            outline: none;
+        }
+
+        .send-button {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            flex-shrink: 0;
+            margin: 2px;
+        }
+
+        .send-button:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+
+        .send-button:disabled {
+            background: var(--bg-tertiary);
+            cursor: not-allowed;
+        }
+
+        .send-button svg {
+            width: 18px;
+            height: 18px;
+            color: white;
+        }
+
+        .send-button:disabled svg {
+            color: var(--text-tertiary);
+        }
+
+        .char-count {
+            position: absolute;
+            bottom: -20px;
+            right: 8px;
+            font-size: 11px;
+            color: var(--text-tertiary);
+        }
+
+        .char-count.warning {
+            color: #b45309;
+        }
+
+        .char-count.error {
+            color: #991b1b;
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            padding: 20px 0;
+            background: var(--bg-secondary);
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .typing-avatar {
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .typing-avatar svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+            padding-left: 0;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-tertiary);
+            border-radius: 50%;
+            animation: typingPulse 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingPulse {
+            0%, 60%, 100% { opacity: 0.3; transform: scale(1); }
+            30% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* Scrollbar */
+        .chat-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb:hover {
+            background: var(--border-hover);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span>AI Chat</span>
+            </div>
+            
+            <div class="model-selector">
+                <button class="model-selector-btn" id="modelSelectorBtn" onclick="toggleModelDropdown()">
+                    <span id="selectedModelName">Gemini 3 Pro</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div class="model-dropdown" id="modelDropdown">
+                    <div class="model-group">
+                        <div class="model-group-label">Gemini 3 Preview</div>
+                        <div class="model-option selected" data-value="gemini-3-pro-preview" data-name="Gemini 3 Pro" onclick="selectModel(this)">
+                            <div class="model-option-icon">◆</div>
+                            <div class="model-option-info">
+                                <div class="model-option-name">Gemini 3 Pro</div>
+                                <div class="model-option-desc">Most capable reasoning</div>
+                            </div>
+                            <svg class="model-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
+                        <div class="model-option" data-value="gemini-3-flash-preview" data-name="Gemini 3 Flash" onclick="selectModel(this)">
+                            <div class="model-option-icon">⚡</div>
+                            <div class="model-option-info">
+                                <div class="model-option-name">Gemini 3 Flash</div>
+                                <div class="model-option-desc">Fast and efficient</div>
+                            </div>
+                            <svg class="model-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="model-group">
+                        <div class="model-group-label">Gemini 2.5</div>
+                        <div class="model-option" data-value="gemini-2.5-pro" data-name="Gemini 2.5 Pro" onclick="selectModel(this)">
+                            <div class="model-option-icon">◆</div>
+                            <div class="model-option-info">
+                                <div class="model-option-name">Gemini 2.5 Pro</div>
+                                <div class="model-option-desc">Advanced reasoning</div>
+                            </div>
+                            <svg class="model-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
+                        <div class="model-option" data-value="gemini-2.5-flash" data-name="Gemini 2.5 Flash" onclick="selectModel(this)">
+                            <div class="model-option-icon">⚡</div>
+                            <div class="model-option-info">
+                                <div class="model-option-name">Gemini 2.5 Flash</div>
+                                <div class="model-option-desc">Balanced performance</div>
+                            </div>
+                            <svg class="model-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
+                        <div class="model-option" data-value="gemini-2.5-flash-lite" data-name="Gemini 2.5 Flash Lite" onclick="selectModel(this)">
+                            <div class="model-option-icon">○</div>
+                            <div class="model-option-info">
+                                <div class="model-option-name">Gemini 2.5 Flash Lite</div>
+                                <div class="model-option-desc">Lightweight and fast</div>
+                            </div>
+                            <svg class="model-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="model-group">
+                        <div class="model-group-label">Gemini 2.0</div>
+                        <div class="model-option" data-value="gemini-2.0-flash" data-name="Gemini 2.0 Flash" onclick="selectModel(this)">
+                            <div class="model-option-icon">⚡</div>
+                            <div class="model-option-info">
+                                <div class="model-option-name">Gemini 2.0 Flash</div>
+                                <div class="model-option-desc">Reliable performance</div>
+                            </div>
+                            <svg class="model-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
+                        <div class="model-option" data-value="gemini-2.0-flash-lite" data-name="Gemini 2.0 Flash Lite" onclick="selectModel(this)">
+                            <div class="model-option-icon">○</div>
+                            <div class="model-option-info">
+                                <div class="model-option-name">Gemini 2.0 Flash Lite</div>
+                                <div class="model-option-desc">Quick responses</div>
+                            </div>
+                            <svg class="model-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="api-key-bar">
+        <div class="api-key-container">
+            <input 
+                type="password" 
+                id="apiKeyInput" 
+                class="api-key-input"
+                placeholder="Enter your Gemini API key"
+            />
+            <button class="clear-btn" onclick="clearChat()">Clear</button>
+        </div>
+    </div>
+
+    <main class="chat-area" id="chatArea">
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-state" id="welcomeState">
+                <div class="welcome-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h1 class="welcome-title">How can I help you today?</h1>
+                <p class="welcome-subtitle">All conversations are protected by two-tier security guardrails.</p>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-inner">
+                <div class="typing-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="input-area">
+        <div class="input-container">
+            <div class="input-box">
+                <textarea 
+                    id="chatInput" 
+                    class="chat-textarea"
+                    placeholder="Message AI Chat..."
+                    rows="1"
+                    maxlength="10000"
+                ></textarea>
+                <button class="send-button" id="sendBtn" onclick="sendMessage()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="char-count" id="charCounter"></div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let conversationHistory = [];
+        let isLoading = false;
+        let selectedModel = 'gemini-3-pro-preview';
+
+        // DOM Elements
+        const chatInput = document.getElementById('chatInput');
+        const charCounter = document.getElementById('charCounter');
+        const sendBtn = document.getElementById('sendBtn');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatArea = document.getElementById('chatArea');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const welcomeState = document.getElementById('welcomeState');
+        const modelSelectorBtn = document.getElementById('modelSelectorBtn');
+        const modelDropdown = document.getElementById('modelDropdown');
+        const selectedModelName = document.getElementById('selectedModelName');
+
+        // Model dropdown
+        function toggleModelDropdown() {
+            const isOpen = modelDropdown.classList.toggle('open');
+            modelSelectorBtn.classList.toggle('open', isOpen);
+        }
+
+        function selectModel(element) {
+            selectedModel = element.dataset.value;
+            selectedModelName.textContent = element.dataset.name;
+            
+            document.querySelectorAll('.model-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            
+            toggleModelDropdown();
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.model-selector')) {
+                modelDropdown.classList.remove('open');
+                modelSelectorBtn.classList.remove('open');
+            }
+        });
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+            
+            const length = this.value.length;
+            if (length > 0) {
+                charCounter.textContent = length.toLocaleString() + ' / 10,000';
+                charCounter.style.display = 'block';
+            } else {
+                charCounter.style.display = 'none';
+            }
+            
+            if (length > 9500) {
+                charCounter.className = 'char-count error';
+            } else if (length > 8000) {
+                charCounter.className = 'char-count warning';
+            } else {
+                charCounter.className = 'char-count';
+            }
+        });
+
+        // Send on Enter
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function formatTime(date) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function addMessage(role, content, meta = {}) {
+            if (welcomeState) {
+                welcomeState.style.display = 'none';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+
+            if (role === 'system') {
+                messageDiv.innerHTML = `
+                    <div class="message-inner">
+                        <div class="system-message">${escapeHtml(content)}</div>
+                    </div>
+                `;
+                if (meta.isError) messageDiv.classList.add('error');
+            } else {
+                const avatarContent = role === 'user' ? 'Y' : 'AI';
+                const senderName = role === 'user' ? 'You' : 'AI Chat';
+                const securityBadge = meta.guardrail ? 
+                    `<span class="security-badge ${meta.guardrail.safe ? 'passed' : 'blocked'}">
+                        ${meta.guardrail.safe ? '✓ Secure' : '✕ Blocked'}
+                    </span>` : '';
+
+                messageDiv.innerHTML = `
+                    <div class="message-inner">
+                        <div class="message-header">
+                            <div class="message-avatar">${avatarContent}</div>
+                            <span class="message-sender">${senderName}</span>
+                        </div>
+                        <div class="message-content">${escapeHtml(content)}</div>
+                        <div class="message-meta">
+                            <span>${formatTime(new Date())}</span>
+                            ${meta.latency ? `<span>${meta.latency}ms</span>` : ''}
+                            ${securityBadge}
+                        </div>
+                    </div>
+                `;
+            }
+
+            chatMessages.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showTyping() {
+            typingIndicator.classList.add('active');
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function hideTyping() {
+            typingIndicator.classList.remove('active');
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!message || isLoading) return;
+
+            if (!apiKey) {
+                addMessage('system', 'Please enter your Gemini API key to continue.', { isError: true });
+                return;
+            }
+
+            addMessage('user', message);
+            conversationHistory.push({ role: 'user', content: message });
+
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            charCounter.style.display = 'none';
+
+            isLoading = true;
+            sendBtn.disabled = true;
+            showTyping();
+
+            const startTime = Date.now();
+
+            try {
+                const response = await fetch('/api/v1/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        api_key: apiKey,
+                        model: selectedModel,
+                        conversation_history: conversationHistory.slice(0, -1)
+                    })
+                });
+
+                const latency = Date.now() - startTime;
+                const data = await response.json();
+                const actualData = data.detail || data;
+
+                if (actualData.success && actualData.response) {
+                    addMessage('assistant', actualData.response, {
+                        latency: latency,
+                        guardrail: actualData.guardrail
+                    });
+                    conversationHistory.push({ role: 'assistant', content: actualData.response });
+                } else {
+                    const errorMsg = actualData.error || 'Failed to get response';
+                    addMessage('system', errorMsg, { isError: true });
+                    conversationHistory.pop();
+                }
+
+            } catch (error) {
+                addMessage('system', 'Network error: ' + error.message, { isError: true });
+                conversationHistory.pop();
+            } finally {
+                isLoading = false;
+                sendBtn.disabled = false;
+                hideTyping();
+            }
+        }
+
+        function clearChat() {
+            conversationHistory = [];
+            chatMessages.innerHTML = `
+                <div class="welcome-state" id="welcomeState">
+                    <div class="welcome-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h1 class="welcome-title">How can I help you today?</h1>
+                    <p class="welcome-subtitle">All conversations are protected by two-tier security guardrails.</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
